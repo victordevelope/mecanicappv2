@@ -1,0 +1,8 @@
+{
+  "projects": {
+    "firebase deploy --only firestore": "tu-proyecto-firebase",
+    "default": "tu-proyecto-firebase"
+  },
+  "targets": {},
+  "etags": {}
+}

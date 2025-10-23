@@ -1,0 +1,7 @@
+{
+  "name": "mantenimiento-vehicular",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "angular-standalone"
+}

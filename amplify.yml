@@ -1,0 +1,19 @@
+version: 1
+applications:
+  - appRoot: /
+    frontend:
+      phases:
+        preBuild:
+          commands:
+            - npm ci
+        build:
+          commands:
+            - echo "window.__env = { apiUrl: '$API_URL' };" > src/assets/env.js
+            - npm run build:prod
+      artifacts:
+        baseDirectory: www
+        files:
+          - '**/*'
+      cache:
+        paths:
+          - node_modules/**/*

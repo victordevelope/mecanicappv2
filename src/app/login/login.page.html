@@ -1,0 +1,117 @@
+<ion-header [translucent]="true">
+  <ion-toolbar color="primary">
+    <ion-title>
+      Iniciar Sesión
+    </ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" class="ion-padding">
+  <div class="login-container">
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title class="ion-text-center">Mantenimiento Vehicular</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <form (ngSubmit)="login()" *ngIf="!showRegister">
+          <ion-item>
+            <ion-label position="floating">Usuario</ion-label>
+            <ion-input [(ngModel)]="username" name="username" required></ion-input>
+          </ion-item>
+          
+          <ion-item>
+            <ion-label position="floating">Contraseña</ion-label>
+            <ion-input [(ngModel)]="password" name="password" type="password" required></ion-input>
+          </ion-item>
+          
+          <div class="ion-padding">
+            <ion-button expand="block" type="submit" [disabled]="isLoading">
+              Iniciar Sesión
+            </ion-button>
+          </div>
+          
+          <div class="ion-text-center">
+            <ion-button fill="clear" (click)="showRegister = true">
+              ¿No tienes cuenta? Regístrate
+            </ion-button>
+          </div>
+          
+          <!-- Eliminar o comentar los botones de Google en ambos formularios -->
+          <!-- En el formulario de login (aproximadamente línea 38) -->
+          <!--
+          <div class="ion-padding-top">
+            <ion-button expand="block" color="danger" (click)="loginWithGoogle()">
+              <ion-icon name="logo-google" slot="start"></ion-icon>
+              Iniciar con Google
+            </ion-button>
+          </div>
+          -->
+          
+          <!-- En el formulario de registro (aproximadamente línea 80) -->
+          <!--
+          <div class="ion-padding-top">
+            <ion-button expand="block" color="danger" (click)="loginWithGoogle()">
+              <ion-icon name="logo-google" slot="start"></ion-icon>
+              Registrarse con Google
+            </ion-button>
+          </div>
+          -->
+          
+          @if (errorMessage) {
+            <div class="error-message ion-text-center">
+              {{ errorMessage }}
+            </div>
+          }
+        </form>
+        
+        <!-- Formulario de registro -->
+        <form (ngSubmit)="register()" *ngIf="showRegister">
+          <ion-item>
+            <ion-label position="floating">Nombre de Usuario</ion-label>
+            <ion-input [(ngModel)]="newUser.username" name="newUsername" required></ion-input>
+          </ion-item>
+          
+          <ion-item>
+            <ion-label position="floating">Correo Electrónico</ion-label>
+            <ion-input [(ngModel)]="newUser.email" name="newEmail" type="email" required></ion-input>
+          </ion-item>
+          
+          <ion-item>
+            <ion-label position="floating">Contraseña</ion-label>
+            <ion-input [(ngModel)]="newUser.password" name="newPassword" type="password" required></ion-input>
+          </ion-item>
+          
+          <ion-item>
+            <ion-label position="floating">Confirmar Contraseña</ion-label>
+            <ion-input [(ngModel)]="confirmPassword" name="confirmPassword" type="password" required></ion-input>
+          </ion-item>
+          
+          <div class="ion-padding">
+            <ion-button expand="block" type="submit" [disabled]="isLoading">
+              Registrarse
+            </ion-button>
+          </div>
+          
+          <div class="ion-text-center">
+            <ion-button fill="clear" (click)="showRegister = false">
+              ¿Ya tienes cuenta? Inicia sesión
+            </ion-button>
+          </div>
+          
+          <div class="ion-padding-top">
+            <ion-button expand="block" color="danger" (click)="loginWithGoogle()">
+              <ion-icon name="logo-google" slot="start"></ion-icon>
+              Registrarse con Google
+            </ion-button>
+          </div>
+          
+          @if (errorMessage) {
+            <div class="error-message ion-text-center">
+              {{ errorMessage }}
+            </div>
+          }
+        </form>
+      </ion-card-content>
+    </ion-card>
+  </div>
+</ion-content>

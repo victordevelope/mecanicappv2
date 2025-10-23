@@ -1,0 +1,118 @@
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-title>
+      Mis Vehículos
+    </ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <ion-header collapse="condense">
+    <ion-toolbar>
+      <ion-title size="large">Mis Vehículos</ion-title>
+    </ion-toolbar>
+  </ion-header>
+
+  <ion-searchbar placeholder="Buscar por marca, modelo o placa" [(ngModel)]="searchTerm" (ionInput)="filterVehicles()"></ion-searchbar>
+
+  <ion-list>
+    @for (vehicle of filteredVehicles; track vehicle.id) {
+      <ion-item-sliding>
+        <ion-item>
+          <ion-label>
+            <h2>{{ vehicle.brand }} {{ vehicle.model }}</h2>
+            <p>Año: {{ vehicle.year }}</p>
+            <p>Placa: {{ vehicle.plate }}</p>
+          </ion-label>
+        </ion-item>
+        <!-- Opciones del item (añade Editar) -->
+        <ion-item-options side="end">
+          <ion-item-option color="primary" (click)="openEditVehicle(vehicle)">Editar</ion-item-option>
+          <ion-item-option color="danger" (click)="deleteVehicle(vehicle.id!)">Eliminar</ion-item-option>
+        </ion-item-options>
+      </ion-item-sliding>
+    }
+    @empty {
+      <ion-item>
+        <ion-label class="ion-text-center">
+          No hay vehículos registrados. Agrega uno nuevo con el botón +
+        </ion-label>
+      </ion-item>
+    }
+  </ion-list>
+
+  <ion-fab vertical="bottom" horizontal="end" slot="fixed">
+    <ion-fab-button (click)="openModal()">
+      <ion-icon name="add"></ion-icon>
+    </ion-fab-button>
+  </ion-fab>
+
+  <ion-modal [isOpen]="isModalOpen">
+    <ng-template>
+      <ion-header>
+        <ion-toolbar>
+          <ion-title>Nuevo Vehículo</ion-title>
+          <ion-buttons slot="end">
+            <ion-button (click)="closeModal()">Cancelar</ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+      <ion-content class="ion-padding">
+        <ion-item>
+          <ion-label position="stacked">Marca</ion-label>
+          <ion-input [(ngModel)]="newVehicle.brand" placeholder="Ej. Toyota"></ion-input>
+        </ion-item>
+        <ion-item>
+          <ion-label position="stacked">Modelo</ion-label>
+          <ion-input [(ngModel)]="newVehicle.model" placeholder="Ej. Corolla"></ion-input>
+        </ion-item>
+        <ion-item>
+          <ion-label position="stacked">Año</ion-label>
+          <ion-input [(ngModel)]="newVehicle.year" type="number" placeholder="Ej. 2020"></ion-input>
+        </ion-item>
+        <ion-item>
+          <ion-label position="stacked">Placa</ion-label>
+          <ion-input [(ngModel)]="newVehicle.plate" placeholder="Ej. ABC-123"></ion-input>
+        </ion-item>
+        <div class="ion-padding">
+          <ion-button expand="block" (click)="saveVehicle()">Guardar</ion-button>
+        </div>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+
+  <!-- Modal para editar vehículo -->
+  <ion-modal [isOpen]="isEditModalOpen">
+    <ng-template>
+      <ion-header>
+        <ion-toolbar>
+          <ion-title>Editar Vehículo</ion-title>
+          <ion-buttons slot="end">
+            <ion-button (click)="closeEditVehicle()">Cancelar</ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+      <ion-content class="ion-padding">
+        <ion-item>
+          <ion-label position="stacked">Marca</ion-label>
+          <ion-input [(ngModel)]="editVehicle!.brand"></ion-input>
+        </ion-item>
+        <ion-item>
+          <ion-label position="stacked">Modelo</ion-label>
+          <ion-input [(ngModel)]="editVehicle!.model"></ion-input>
+        </ion-item>
+        <ion-item>
+          <ion-label position="stacked">Año</ion-label>
+          <ion-input type="number" [(ngModel)]="editVehicle!.year"></ion-input>
+        </ion-item>
+        <ion-item>
+          <ion-label position="stacked">Placa</ion-label>
+          <ion-input [(ngModel)]="editVehicle!.plate"></ion-input>
+        </ion-item>
+        <div class="ion-padding">
+          <ion-button expand="block" (click)="saveEditVehicle()">Guardar</ion-button>
+        </div>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+</ion-content>
