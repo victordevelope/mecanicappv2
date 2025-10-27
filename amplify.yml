@@ -5,13 +5,14 @@ applications:
       phases:
         preBuild:
           commands:
-            - npm ci
+            - npm ci --legacy-peer-deps
+            - node -e "const fs=require('fs'); const api=process.env.API_URL||''; fs.writeFileSync('src/assets/env.js', `window.__env = { apiUrl: '${api}' };`);"
         build:
           commands:
-            - echo "window.__env = { apiUrl: '$API_URL' };" > src/assets/env.js
-            - npm run build:prod
+            - npm run build
       artifacts:
-        baseDirectory: www
+        # Ajusta si tu build genera dist/<nombre-app>
+        baseDirectory: dist
         files:
           - '**/*'
       cache:
