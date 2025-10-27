@@ -1,15 +1,13 @@
+require('dotenv').config();
 const admin = require('firebase-admin');
 const mysql = require('mysql2/promise');
-require('dotenv').config();
 
-// Inicializar Firebase Admin
-const serviceAccount = require('./serviceAccountKey.json');
+// Inicializar Firebase Admin usando credenciales del entorno
 admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount)
+  credential: admin.credential.applicationDefault()
 });
 
 const db = admin.firestore();
-// Ignora propiedades undefined para evitar el error de Firestore
 db.settings({ ignoreUndefinedProperties: true });
 
 // Helpers para sanear datos
