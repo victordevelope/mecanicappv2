@@ -15,16 +15,17 @@ const allowedOrigins = (process.env.CORS_ORIGIN || 'https://tu-proyecto-firebase
   .map(s => s.trim())
   .filter(Boolean);
 
-
-
-
 const corsOptions = {
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
+    // Permite llamadas sin origin (server->server) y dominios en whitelist
+    const allowed =
+      !origin ||
+      allowedOrigins.includes(origin) ||
+      (origin && origin.endsWith('.vercel.app')) ||   // previews Vercel
+      (origin && origin.endsWith('.web.app'));        // previews Firebase Hosting
+    
+    console.log(`CORS check - Origin: ${origin}, Allowed: ${allowed}`);
+    callback(null, allowed);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -33,6 +34,8 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
+// Manejo de preflight para cualquier ruta (evita '*')
+app.options(/.*/, cors(corsOptions));
 // Manejar preflight para cualquier ruta usando RegExp en lugar de '*'
 app.options(/.*/, cors(corsOptions));
 app.use(express.json());
