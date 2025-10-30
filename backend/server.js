@@ -14,7 +14,7 @@ const allowedOrigins = (process.env.CORS_ORIGIN || 'https://tu-proyecto-firebase
   .split(',')
   .map(s => s.trim())
   .filter(Boolean);
-const cors = require('cors');
+
 
 
 
