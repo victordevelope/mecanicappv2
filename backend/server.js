@@ -15,11 +15,7 @@ const allowedOrigins = (process.env.CORS_ORIGIN || 'https://tu-proyecto-firebase
   .map(s => s.trim())
   .filter(Boolean);
 const cors = require('cors');
-app.use(cors({
-  origin: 'https://mecanicappv2.onrender.com', // tu dominio frontend
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  credentials: true
-}));
+
 
 
 const corsOptions = {
