@@ -467,8 +467,8 @@ export class DataService {
         })
       )
       .subscribe(vehicles => {
-        // Filtrar vehículos por el usuario actual
-        this.vehicles = vehicles.filter(v => v.userId === userId);
+        // Normaliza tipos: back envía number, front maneja string
+        this.vehicles = vehicles.filter(v => String(v.userId) === String(userId));
         this.vehiclesSubject.next([...this.vehicles]);
         this.saveData();
       });

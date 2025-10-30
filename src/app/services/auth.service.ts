@@ -68,22 +68,23 @@ export class AuthService {
   }
 
   login(email: string, password: string): Observable<User> {
-    return this.http.post<any>(`${this.apiUrl}/auth/login`, { 
-      username: email, 
-      email, 
-      password 
+    return this.http.post<any>(`${this.apiUrl}/auth/login`, {
+        username: email,
+        email,
+        password
     }).pipe(
-      map(resp => {
-        const user: User = {
-          id: resp.user?.id ?? '',
-          username: resp.user?.username ?? '',
-          email: resp.user?.email ?? email,
-          token: resp.token
-        };
-        localStorage.setItem('currentUser', JSON.stringify(user));
-        this.currentUserSubject.next(user);
-        return user;
-      })
+        map(resp => {
+            // Tu backend responde: { id, username, email, token }
+            const user: User = {
+                id: (resp.id ?? resp.user?.id ?? '').toString(),
+                username: resp.username ?? resp.user?.username ?? email,
+                email: resp.email ?? email,
+                token: resp.token
+            };
+            localStorage.setItem('currentUser', JSON.stringify(user));
+            this.currentUserSubject.next(user);
+            return user;
+        })
     );
   }
 
