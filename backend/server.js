@@ -10,12 +10,33 @@ dotenv.config();
 const app = express();
 
 // Configuración CORS
-const allowedOrigins = (process.env.CORS_ORIGIN || '').split(',').filter(Boolean);
-const corsOptions = allowedOrigins.length
-  ? { origin: allowedOrigins, credentials: true }
-  : { origin: '*', credentials: true };
+const allowedOrigins = (process.env.CORS_ORIGIN || 'https://tu-proyecto-firebase.web.app')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
+const cors = require('cors');
+app.use(cors({
+  origin: 'https://mecanicappv2.onrender.com', // tu dominio frontend
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  credentials: true
+}));
+
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
 
 app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -237,5 +258,6 @@ app.get('/api/reminders', authenticateToken, async (req, res) => {
 // ===============================
 // INICIO SERVIDOR
 // ===============================
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`));
+const PORT = process.env.PORT || 10000; // usa el puerto de Render
+app.listen(PORT, () => console.log(`🚀 Servidor corriendo en puerto ${PORT}`));
+
