@@ -26,6 +26,7 @@ export class DataService {
 
   private http = inject(HttpClient);
   private authService = inject(AuthService);
+  vehiclesBackendEmptySubject: any;
 
   constructor() {
     // Cargar datos del localStorage si existen
@@ -156,12 +157,17 @@ export class DataService {
   }
 
   // Métodos para vehículos
-  getVehicles(): Vehicle[] {
+  getVehicles(incoming: Vehicle[], userId: string): Vehicle[] {
     return [...this.vehicles];
   }
 
   getVehiclesObservable(): Observable<Vehicle[]> {
     return this.vehiclesSubject.asObservable();
+  }
+
+  // Exponer evento de backend vacío para Tab1
+  getVehiclesBackendEmptyObservable(): Observable<boolean> {
+    return this.vehiclesBackendEmptySubject.asObservable();
   }
 
   getMaintenancesObservable(): Observable<Maintenance[]> {
@@ -180,7 +186,6 @@ export class DataService {
     const userId = this.getCurrentUserId();
     if (!userId) return;
 
-    // Asignar ID temporal sólo para vista local inmediata
     const tempId = Date.now().toString();
     vehicle.id = tempId;
     vehicle.userId = userId;
@@ -204,7 +209,7 @@ export class DataService {
             if (serverId) {
               const idx = this.vehicles.findIndex(v => v.id === tempId);
               if (idx !== -1) {
-                this.vehicles[idx].id = serverId.toString();
+                this.vehicles[idx].id = String(serverId);
                 this.vehiclesSubject.next([...this.vehicles]);
                 this.saveData();
               }
@@ -467,17 +472,21 @@ export class DataService {
         })
       )
       .subscribe(vehicles => {
-        if (!vehicles) {
-          return;
-        }
+        if (!vehicles) return;
 
         const incoming = vehicles.filter(v => String(v.userId) === String(userId));
-        // Si el backend devuelve vacío y tenemos datos locales, preservamos los locales
-        if (incoming.length === 0 && this.vehicles.length > 0) {
-          return;
+        if (incoming.length === 0) {
+          // Avisar que el backend devolvió vacío; mantener lista local si existe
+          this.vehiclesBackendEmptySubject.next(true);
+          if (this.vehicles.length > 0) {
+            return;
+          }
+        } else {
+          this.vehiclesBackendEmptySubject.next(false);
         }
 
-        this.vehicles = incoming;
+        const merged = this.getVehicles(incoming, userId);
+        this.vehicles = merged;
         this.vehiclesSubject.next([...this.vehicles]);
         this.saveData();
       });

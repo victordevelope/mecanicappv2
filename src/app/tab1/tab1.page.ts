@@ -26,6 +26,8 @@ import { Vehicle } from '../models/vehicle.model';
 import { FormsModule } from '@angular/forms';
 import { IonSearchbar } from '@ionic/angular/standalone';
 import { Subscription } from 'rxjs';
+import { AuthService } from '../services/auth.service';
+import { ToastController } from '@ionic/angular';
 
 @Component({
   selector: 'app-tab1',
@@ -70,12 +72,21 @@ export class Tab1Page implements OnInit, OnDestroy {
     plate: '',
   };
 
-  constructor(private dataService: DataService) {
+  constructor(private dataService: DataService, private authService: AuthService, private toastCtrl: ToastController) {
     addIcons({ add, car });
   }
 
   ngOnInit() {
     this.loadVehicles();
+
+    // Avisar si el backend devuelve vacío y se mantiene la lista local
+    this.subscription.add(
+      this.dataService.getVehiclesBackendEmptyObservable().subscribe(isEmpty => {
+        if (isEmpty) {
+          this.showToast('El servidor no devolvió vehículos; manteniendo lista local.', 'warning');
+        }
+      })
+    );
   }
 
   ngOnDestroy() {
@@ -125,11 +136,21 @@ export class Tab1Page implements OnInit, OnDestroy {
   }
 
   saveVehicle() {
-    if (this.validateForm()) {
-      this.dataService.addVehicle({ ...this.newVehicle });
-      this.loadVehicles();
-      this.closeModal();
+    if (!this.validateForm()) {
+      this.showToast('Completa marca, modelo y placa.', 'danger');
+      return;
     }
+
+    // Validar sesión con id de usuario
+    const userId = this.authService.currentUserValue?.id;
+    if (!userId || userId.trim() === '') {
+      this.showToast('Sesión inválida. Inicia sesión nuevamente.', 'danger');
+      return;
+    }
+
+    this.dataService.addVehicle({ ...this.newVehicle });
+    this.loadVehicles();
+    this.closeModal();
   }
 
   validateForm(): boolean {
@@ -159,5 +180,15 @@ export class Tab1Page implements OnInit, OnDestroy {
     if (!this.editVehicle) return;
     this.dataService.updateVehicle(this.editVehicle);
     this.closeEditVehicle();
+  }
+
+  private async showToast(message: string, color: 'danger' | 'warning' | 'success' = 'warning') {
+    const toast = await this.toastCtrl.create({
+      message,
+      duration: 2500,
+      position: 'bottom',
+      color
+    });
+    await toast.present();
   }
 }

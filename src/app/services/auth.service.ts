@@ -39,24 +39,33 @@ export class AuthService {
   private auth = inject(Auth);
   private firestore = inject(Firestore);
 
-  // Helper para extraer el id del JWT si la respuesta no lo trae
-  private getIdFromToken(token?: string): string {
-    if (!token) return '';
+  // Decodificador robusto para JWT (Base64URL con padding)
+  private decodeJwt<T = any>(token?: string): T | null {
+    if (!token) return null;
     try {
-      const payload = JSON.parse(atob(String(token).split('.')[1]));
-      const claimId = payload?.id ?? payload?.user?.id;
-      return claimId != null ? String(claimId) : '';
+      const parts = String(token).split('.');
+      if (parts.length < 2) return null;
+      let base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+      const pad = base64.length % 4;
+      if (pad) base64 += '='.repeat(4 - pad);
+      const json = atob(base64);
+      return JSON.parse(json) as T;
     } catch {
-      return '';
+      return null;
     }
   }
 
+  // Helper para obtener el id desde el JWT
+  private getIdFromToken(token?: string): string {
+    const payload = this.decodeJwt<any>(token);
+    const claimId = payload?.id ?? payload?.user?.id;
+    return claimId != null ? String(claimId) : '';
+  }
+
   constructor() {
-    // Recuperar usuario almacenado localmente si existe
     const storedUser = localStorage.getItem('currentUser');
     const parsedUser: User | null = storedUser ? JSON.parse(storedUser) : null;
 
-    // Si hay token pero id vacío, repara el usuario desde el token
     if (parsedUser?.token && (!parsedUser.id || parsedUser.id === '')) {
       const fixedId = this.getIdFromToken(parsedUser.token);
       if (fixedId) {
@@ -65,11 +74,9 @@ export class AuthService {
       }
     }
 
-    // Inicializamos BehaviorSubject con valor inicial
     this.currentUserSubject = new BehaviorSubject<User | null>(parsedUser);
     this.currentUser = this.currentUserSubject.asObservable();
 
-    // Si usamos backend con JWT, ignoramos el estado de Firebase para no borrar la sesión
     const isBackendAuth = (this.apiUrl || '').includes('/api');
     if (!isBackendAuth) {
       onAuthStateChanged(this.auth, (fbUser: FirebaseUser | null) => {
@@ -100,9 +107,8 @@ export class AuthService {
     }).pipe(
       map(resp => {
         const token: string = resp.token;
-        // Intentar obtener el id desde la respuesta, si no, desde el token
         const rawId = resp.id ?? resp.user?.id;
-        let idStr = rawId != null ? String(rawId) : this.getIdFromToken(token);
+        const idStr = rawId != null ? String(rawId) : this.getIdFromToken(token);
 
         const user: User = {
           id: idStr,
@@ -123,10 +129,10 @@ export class AuthService {
       email: user.email,
       password: user.password
     }).pipe(
-      map((resp) => {
+      map(resp => {
         const token: string = resp.token;
         const rawId = resp.id ?? resp.user?.id;
-        let idStr = rawId != null ? String(rawId) : this.getIdFromToken(token);
+        const idStr = rawId != null ? String(rawId) : this.getIdFromToken(token);
 
         const newUser: User = {
           id: idStr,
