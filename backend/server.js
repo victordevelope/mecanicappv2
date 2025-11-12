@@ -10,7 +10,7 @@ dotenv.config();
 const app = express();
 
 // Configuración CORS
-const allowedOrigins = (process.env.CORS_ORIGIN || 'https://tu-proyecto-firebase.web.app')
+const allowedOrigins = (process.env.CORS_ORIGIN || 'https://tu-proyecto-firebase.web.app,http://localhost:4200')
   .split(',')
   .map(s => s.trim())
   .filter(Boolean);
@@ -22,7 +22,8 @@ const corsOptions = {
       !origin ||
       allowedOrigins.includes(origin) ||
       (origin && origin.endsWith('.vercel.app')) ||   // previews Vercel
-      (origin && origin.endsWith('.web.app'));        // previews Firebase Hosting
+      (origin && origin.endsWith('.web.app')) ||      // previews Firebase Hosting
+      (origin && origin.includes('localhost'));       // local development
     
     console.log(`CORS check - Origin: ${origin}, Allowed: ${allowed}`);
     callback(null, allowed);

@@ -463,12 +463,21 @@ export class DataService {
       .pipe(
         catchError(error => {
           console.error('Error al obtener vehículos:', error);
-          return of([]);
+          return of(null);
         })
       )
       .subscribe(vehicles => {
-        // Normaliza tipos: back envía number, front maneja string
-        this.vehicles = vehicles.filter(v => String(v.userId) === String(userId));
+        if (!vehicles) {
+          return;
+        }
+
+        const incoming = vehicles.filter(v => String(v.userId) === String(userId));
+        // Si el backend devuelve vacío y tenemos datos locales, preservamos los locales
+        if (incoming.length === 0 && this.vehicles.length > 0) {
+          return;
+        }
+
+        this.vehicles = incoming;
         this.vehiclesSubject.next([...this.vehicles]);
         this.saveData();
       });
@@ -485,12 +494,19 @@ export class DataService {
       .pipe(
         catchError(error => {
           console.error('Error al obtener mantenimientos:', error);
-          return of([]);
+          return of(null);
         })
       )
       .subscribe(maintenances => {
-        // Filtrar mantenimientos por el usuario actual
-        this.maintenances = maintenances.filter(m => m.userId === userId);
+        if (!maintenances) {
+          return;
+        }
+        const incoming = maintenances.filter(m => m.userId === userId);
+        if (incoming.length === 0 && this.maintenances.length > 0) {
+          return;
+        }
+
+        this.maintenances = incoming;
         this.maintenancesSubject.next([...this.maintenances]);
         this.saveData();
       });
@@ -507,12 +523,20 @@ export class DataService {
       .pipe(
         catchError(error => {
           console.error('Error al obtener recordatorios:', error);
-          return of([]);
+          return of(null);
         })
       )
       .subscribe(reminders => {
-        // Si el backend devuelve recordatorios filtrados por usuario, este filter es redundante.
-        this.reminders = reminders.filter(r => r.userId === userId);
+        if (!reminders) {
+          return;
+        }
+
+        const incoming = reminders.filter(r => r.userId === userId);
+        if (incoming.length === 0 && this.reminders.length > 0) {
+          return;
+        }
+
+        this.reminders = incoming;
         this.remindersSubject.next([...this.reminders]);
         this.saveData();
       });
