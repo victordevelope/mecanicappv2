@@ -95,6 +95,7 @@ export class Tab1Page implements OnInit, OnDestroy {
 
   loadVehicles() {
     // Usar observable para actualizaciones automáticas
+    // Esto se activa tanto por refreshVehicles() como por la actualización interna en addVehicle()
     this.subscription.add(
       this.dataService.getVehiclesObservable().subscribe(vehicles => {
         this.vehicles = vehicles;
@@ -135,6 +136,7 @@ export class Tab1Page implements OnInit, OnDestroy {
     };
   }
 
+  // 🚀 CORRECCIÓN 3: Manejar la respuesta asíncrona (Observable)
   saveVehicle() {
     if (!this.validateForm()) {
       this.showToast('Completa marca, modelo y placa.', 'danger');
@@ -148,9 +150,21 @@ export class Tab1Page implements OnInit, OnDestroy {
       return;
     }
 
-    this.dataService.addVehicle({ ...this.newVehicle });
-    this.loadVehicles();
-    this.closeModal();
+    // Llamamos al servicio y nos suscribimos para esperar la respuesta
+    this.dataService.addVehicle({ ...this.newVehicle }).subscribe({
+      next: (response) => {
+        // Se ejecuta cuando el backend (o el manejo offline) finaliza con éxito
+        this.showToast('Vehículo registrado con éxito.', 'success');
+        this.loadVehicles(); // Opcional, el Observable ya notifica, pero es seguro mantenerlo
+        this.closeModal();
+      },
+      error: (err) => {
+        // Se ejecuta si hay un error en la llamada HTTP
+        console.error('Error al registrar vehículo:', err);
+        const errorMessage = err.error?.message || 'Error al conectar con el servidor. Intenta de nuevo.';
+        this.showToast(errorMessage, 'danger');
+      }
+    });
   }
 
   validateForm(): boolean {

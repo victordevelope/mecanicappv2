@@ -1,6 +1,9 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 
+// Importar HttpHeaders para la autenticación si fuera necesario, aunque ya lo maneja el interceptor (no incluido)
+// import { HttpHeaders } from '@angular/common/http'; 
+
 import { BehaviorSubject, Observable, of } from 'rxjs';
 import { map, tap, catchError } from 'rxjs/operators';
 import { Vehicle } from '../models/vehicle.model';
@@ -26,7 +29,9 @@ export class DataService {
 
   private http = inject(HttpClient);
   private authService = inject(AuthService);
-  vehiclesBackendEmptySubject: any;
+  
+  // 🚀 CORRECCIÓN 1: Inicializar correctamente el Subject
+  private vehiclesBackendEmptySubject = new BehaviorSubject<boolean>(false); 
 
   constructor() {
     // Cargar datos del localStorage si existen
@@ -158,7 +163,10 @@ export class DataService {
 
   // Métodos para vehículos
   getVehicles(incoming: Vehicle[], userId: string): Vehicle[] {
-    return [...this.vehicles];
+    // Nota: El método "getVehicles" parece incompleto y probablemente debería
+    // implementar la lógica de merge entre local/server o ser eliminado/renombrado.
+    // Retornamos el array local por ahora para evitar un error.
+    return [...this.vehicles]; 
   }
 
   getVehiclesObservable(): Observable<Vehicle[]> {
@@ -182,14 +190,19 @@ export class DataService {
     return this.vehicles.find(v => v.id === id);
   }
 
-  addVehicle(vehicle: Vehicle): void {
+  // 🚀 CORRECCIÓN 2: Devolver Observable para manejo asíncrono
+  addVehicle(vehicle: Vehicle): Observable<any> {
     const userId = this.getCurrentUserId();
-    if (!userId) return;
+    if (!userId) {
+      // Devolvemos un observable nulo o un error si no hay usuario
+      return of(null);
+    }
 
     const tempId = Date.now().toString();
     vehicle.id = tempId;
     vehicle.userId = userId;
 
+    // 1. Guardar localmente inmediatamente (para soporte offline)
     this.vehicles.push(vehicle);
     this.vehiclesSubject.next([...this.vehicles]);
     this.saveData();
@@ -202,22 +215,35 @@ export class DataService {
     };
 
     if (this.isOnline) {
-      this.http.post(`${this.apiUrl}/vehicles`, payload)
-        .subscribe({
-          next: (saved: any) => {
-            const serverId = saved?.id ?? saved?.vehicle?.id;
-            if (serverId) {
-              const idx = this.vehicles.findIndex(v => v.id === tempId);
-              if (idx !== -1) {
-                this.vehicles[idx].id = String(serverId);
-                this.vehiclesSubject.next([...this.vehicles]);
-                this.saveData();
-              }
+      // 2. Hacer la llamada al backend y devolver el Observable
+      return this.http.post(`${this.apiUrl}/vehicles`, payload).pipe(
+        // Usar tap para ejecutar lógica secundaria sin modificar el stream
+        tap((saved: any) => {
+          // 3. Actualizar el ID local si la llamada fue exitosa
+          const serverId = saved?.id ?? saved?.vehicle?.id;
+          if (serverId) {
+            const idx = this.vehicles.findIndex(v => v.id === tempId);
+            if (idx !== -1) {
+              this.vehicles[idx].id = String(serverId);
+              this.vehiclesSubject.next([...this.vehicles]);
+              this.saveData();
             }
-          },
-          error: error => console.error('Error al guardar vehículo en el servidor:', error)
-        });
+          }
+        }),
+        catchError(error => {
+          console.error('Error al guardar vehículo en el servidor:', error);
+          // 4. Revertir la adición local si la llamada al servidor falla
+          this.vehicles = this.vehicles.filter(v => v.id !== tempId);
+          this.vehiclesSubject.next([...this.vehicles]);
+          this.saveData();
+          // Propagar el error para que Tab1Page lo capture
+          throw error; 
+        })
+      );
     }
+    
+    // 5. Si no hay conexión, completamos el Observable inmediatamente con el vehículo local
+    return of(vehicle); 
   }
 
   updateVehicle(vehicle: Vehicle): void {
@@ -256,7 +282,7 @@ export class DataService {
     }
   }
 
-  // Métodos para mantenimientos
+  // Métodos para mantenimientos (omitiendo por brevedad, no se modificaron)
   getMaintenances(vehicleId?: string): Maintenance[] {
     if (vehicleId) {
       return this.maintenances.filter(m => m.vehicleId === vehicleId);
@@ -276,49 +302,50 @@ export class DataService {
       this.saveData();
   
       if (this.isOnline) {
-          const payload = {
-            vehicleId: maintenance.vehicleId,
-            type: maintenance.type,
-            description: (maintenance as any).description ?? '',
-            cost: (maintenance as any).cost ?? 0,
-            mileage: Number(maintenance.mileage) || 0,
-            date: (maintenance as any).date ?? new Date().toISOString()
-          };
+        const payload = {
+          vehicleId: maintenance.vehicleId,
+          type: maintenance.type,
+          description: (maintenance as any).description ?? '',
+          cost: (maintenance as any).cost ?? 0,
+          mileage: Number(maintenance.mileage) || 0,
+          date: (maintenance as any).date ?? new Date().toISOString()
+        };
   
-          this.http.post(`${this.apiUrl}/maintenances`, payload)
-            .subscribe({
-              next: (saved: any) => {
-                const serverId = saved?.maintenance?.id ?? saved?.id;
-                if (serverId) {
-                  const idx = this.maintenances.findIndex(m => m.id === maintenance.id);
-                  if (idx !== -1) {
-                    this.maintenances[idx].id = serverId.toString();
-                    this.maintenancesSubject.next([...this.maintenances]);
-                    this.saveData();
-                  }
+        this.http.post(`${this.apiUrl}/maintenances`, payload)
+          .subscribe({
+            next: (saved: any) => {
+              const serverId = saved?.maintenance?.id ?? saved?.id;
+              if (serverId) {
+                const idx = this.maintenances.findIndex(m => m.id === maintenance.id);
+                if (idx !== -1) {
+                  this.maintenances[idx].id = serverId.toString();
+                  this.maintenancesSubject.next([...this.maintenances]);
+                  this.saveData();
                 }
-              },
-              error: error => console.error('Error al guardar mantenimiento en el servidor:', error)
-            });
+              }
+            },
+            error: error => console.error('Error al guardar mantenimiento en el servidor:', error)
+          });
       }
   }
+
   updateMaintenance(maintenance: Maintenance): void {
-      const index = this.maintenances.findIndex(m => m.id === maintenance.id);
-      if (index !== -1) {
-          this.maintenances[index] = maintenance;
-          this.maintenancesSubject.next([...this.maintenances]);
-          this.saveData();
-  
-          // Ajustar/crear recordatorio relacionado según el mantenimiento
-          this.updateRelatedReminderForMaintenance(maintenance);
-  
-          if (this.isOnline) {
-              this.http.put(`${this.apiUrl}/maintenances/${maintenance.id}`, maintenance)
-                  .subscribe({
-                      error: error => console.error('Error al actualizar mantenimiento en el servidor:', error)
-                  });
-          }
+    const index = this.maintenances.findIndex(m => m.id === maintenance.id);
+    if (index !== -1) {
+      this.maintenances[index] = maintenance;
+      this.maintenancesSubject.next([...this.maintenances]);
+      this.saveData();
+
+      // Ajustar/crear recordatorio relacionado según el mantenimiento
+      this.updateRelatedReminderForMaintenance(maintenance);
+
+      if (this.isOnline) {
+        this.http.put(`${this.apiUrl}/maintenances/${maintenance.id}`, maintenance)
+          .subscribe({
+            error: error => console.error('Error al actualizar mantenimiento en el servidor:', error)
+          });
       }
+    }
   }
 
   deleteMaintenance(id: string): void {
@@ -334,7 +361,7 @@ export class DataService {
     }
   }
 
-  // Métodos para recordatorios
+  // Métodos para recordatorios (omitiendo por brevedad, no se modificaron)
   getReminders(vehicleId?: string): Reminder[] {
     if (vehicleId) {
       return this.reminders.filter(r => r.vehicleId === vehicleId);
