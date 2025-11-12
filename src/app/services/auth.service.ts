@@ -39,36 +39,53 @@ export class AuthService {
   private auth = inject(Auth);
   private firestore = inject(Firestore);
 
+  // Helper para extraer el id del JWT si la respuesta no lo trae
+  private getIdFromToken(token?: string): string {
+    if (!token) return '';
+    try {
+      const payload = JSON.parse(atob(String(token).split('.')[1]));
+      const claimId = payload?.id ?? payload?.user?.id;
+      return claimId != null ? String(claimId) : '';
+    } catch {
+      return '';
+    }
+  }
+
   constructor() {
+    // Recuperar usuario almacenado localmente si existe
     const storedUser = localStorage.getItem('currentUser');
     const parsedUser: User | null = storedUser ? JSON.parse(storedUser) : null;
 
+    // Si hay token pero id vacío, repara el usuario desde el token
+    if (parsedUser?.token && (!parsedUser.id || parsedUser.id === '')) {
+      const fixedId = this.getIdFromToken(parsedUser.token);
+      if (fixedId) {
+        parsedUser.id = fixedId;
+        localStorage.setItem('currentUser', JSON.stringify(parsedUser));
+      }
+    }
+
+    // Inicializamos BehaviorSubject con valor inicial
     this.currentUserSubject = new BehaviorSubject<User | null>(parsedUser);
     this.currentUser = this.currentUserSubject.asObservable();
 
+    // Si usamos backend con JWT, ignoramos el estado de Firebase para no borrar la sesión
     const isBackendAuth = (this.apiUrl || '').includes('/api');
-
-    onAuthStateChanged(this.auth, (fbUser: FirebaseUser | null) => {
-      if (isBackendAuth) {
-        const current = this.currentUserSubject.value;
-        if (current?.token) {
+    if (!isBackendAuth) {
+      onAuthStateChanged(this.auth, (fbUser: FirebaseUser | null) => {
+        if (!fbUser) {
+          this.currentUserSubject.next(null);
+          localStorage.removeItem('currentUser');
           return;
         }
-      }
-
-      if (!fbUser) {
-        this.currentUserSubject.next(null);
-        localStorage.removeItem('currentUser');
-        return;
-      }
-
-      this.currentUserSubject.next({
-        id: fbUser.uid,
-        username: this.currentUserSubject.value?.username || fbUser.email || '',
-        email: fbUser.email || ''
+        this.currentUserSubject.next({
+          id: fbUser.uid,
+          username: this.currentUserSubject.value?.username || fbUser.email || '',
+          email: fbUser.email || ''
+        });
+        localStorage.setItem('currentUser', JSON.stringify(this.currentUserSubject.value));
       });
-      localStorage.setItem('currentUser', JSON.stringify(this.currentUserSubject.value));
-    });
+    }
   }
 
   public get currentUserValue(): User | null {
@@ -82,17 +99,10 @@ export class AuthService {
       password
     }).pipe(
       map(resp => {
-        const token = resp.token;
+        const token: string = resp.token;
+        // Intentar obtener el id desde la respuesta, si no, desde el token
         const rawId = resp.id ?? resp.user?.id;
-        let idStr = rawId != null ? String(rawId) : '';
-
-        if (!idStr && token) {
-          try {
-            const payload = JSON.parse(atob(String(token).split('.')[1]));
-            const claimId = payload?.id ?? payload?.user?.id;
-            if (claimId != null) idStr = String(claimId);
-          } catch {}
-        }
+        let idStr = rawId != null ? String(rawId) : this.getIdFromToken(token);
 
         const user: User = {
           id: idStr,
@@ -114,17 +124,9 @@ export class AuthService {
       password: user.password
     }).pipe(
       map((resp) => {
-        const token = resp.token;
+        const token: string = resp.token;
         const rawId = resp.id ?? resp.user?.id;
-        let idStr = rawId != null ? String(rawId) : '';
-
-        if (!idStr && token) {
-          try {
-            const payload = JSON.parse(atob(String(token).split('.')[1]));
-            const claimId = payload?.id ?? payload?.user?.id;
-            if (claimId != null) idStr = String(claimId);
-          } catch {}
-        }
+        let idStr = rawId != null ? String(rawId) : this.getIdFromToken(token);
 
         const newUser: User = {
           id: idStr,
