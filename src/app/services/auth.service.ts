@@ -40,7 +40,6 @@ export class AuthService {
   private firestore = inject(Firestore);
 
   constructor() {
-    // Recuperar usuario almacenado localmente si existe
     const storedUser = localStorage.getItem('currentUser');
     const parsedUser: User | null = storedUser ? JSON.parse(storedUser) : null;
 
@@ -50,9 +49,7 @@ export class AuthService {
     const isBackendAuth = (this.apiUrl || '').includes('/api');
 
     onAuthStateChanged(this.auth, (fbUser: FirebaseUser | null) => {
-      // Si estamos usando backend con JWT, no sobrescribimos ni borramos el usuario por estado de Firebase
       if (isBackendAuth) {
-        // Si ya tienes usuario con token (backend), lo preservamos
         const current = this.currentUserSubject.value;
         if (current?.token) {
           return;
@@ -80,47 +77,65 @@ export class AuthService {
 
   login(email: string, password: string): Observable<User> {
     return this.http.post<any>(`${this.apiUrl}/auth/login`, {
-        username: email,
-        email,
-        password
+      username: email,
+      email,
+      password
     }).pipe(
-        map(resp => {
-            // Tu backend responde: { id, username, email, token }
-            const user: User = {
-                id: (resp.id ?? resp.user?.id ?? '').toString(),
-                username: resp.username ?? resp.user?.username ?? email,
-                email: resp.email ?? email,
-                token: resp.token
-            };
-            localStorage.setItem('currentUser', JSON.stringify(user));
-            this.currentUserSubject.next(user);
-            return user;
-        })
+      map(resp => {
+        const token = resp.token;
+        const rawId = resp.id ?? resp.user?.id;
+        let idStr = rawId != null ? String(rawId) : '';
+
+        if (!idStr && token) {
+          try {
+            const payload = JSON.parse(atob(String(token).split('.')[1]));
+            const claimId = payload?.id ?? payload?.user?.id;
+            if (claimId != null) idStr = String(claimId);
+          } catch {}
+        }
+
+        const user: User = {
+          id: idStr,
+          username: resp.username ?? resp.user?.username ?? email,
+          email: resp.email ?? email,
+          token
+        };
+        localStorage.setItem('currentUser', JSON.stringify(user));
+        this.currentUserSubject.next(user);
+        return user;
+      })
     );
   }
 
   register(user: User): Observable<User> {
-    // Registro contra backend con JWT
     return this.http.post<any>(`${this.apiUrl}/auth/register`, {
-        username: user.username,
-        email: user.email,
-        password: user.password
+      username: user.username,
+      email: user.email,
+      password: user.password
     }).pipe(
-        map((resp) => {
-            const newUser: User = {
-                id: resp.id?.toString() ?? '',
-                username: resp.username,
-                email: resp.email,
-                token: resp.token
-            };
-            localStorage.setItem('currentUser', JSON.stringify(newUser));
-            this.currentUserSubject.next(newUser);
-            return newUser;
-        }),
-        catchError((error) => {
-            console.error('Error en registro (backend):', error);
-            return throwError(() => error);
-        })
+      map((resp) => {
+        const token = resp.token;
+        const rawId = resp.id ?? resp.user?.id;
+        let idStr = rawId != null ? String(rawId) : '';
+
+        if (!idStr && token) {
+          try {
+            const payload = JSON.parse(atob(String(token).split('.')[1]));
+            const claimId = payload?.id ?? payload?.user?.id;
+            if (claimId != null) idStr = String(claimId);
+          } catch {}
+        }
+
+        const newUser: User = {
+          id: idStr,
+          username: resp.username,
+          email: resp.email,
+          token
+        };
+        localStorage.setItem('currentUser', JSON.stringify(newUser));
+        this.currentUserSubject.next(newUser);
+        return newUser;
+      })
     );
   }
 
