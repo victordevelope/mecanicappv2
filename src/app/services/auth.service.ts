@@ -44,16 +44,27 @@ export class AuthService {
     const storedUser = localStorage.getItem('currentUser');
     const parsedUser: User | null = storedUser ? JSON.parse(storedUser) : null;
 
-    // Inicializamos BehaviorSubject con valor inicial
     this.currentUserSubject = new BehaviorSubject<User | null>(parsedUser);
     this.currentUser = this.currentUserSubject.asObservable();
-    
+
+    const isBackendAuth = (this.apiUrl || '').includes('/api');
+
     onAuthStateChanged(this.auth, (fbUser: FirebaseUser | null) => {
+      // Si estamos usando backend con JWT, no sobrescribimos ni borramos el usuario por estado de Firebase
+      if (isBackendAuth) {
+        // Si ya tienes usuario con token (backend), lo preservamos
+        const current = this.currentUserSubject.value;
+        if (current?.token) {
+          return;
+        }
+      }
+
       if (!fbUser) {
         this.currentUserSubject.next(null);
         localStorage.removeItem('currentUser');
         return;
       }
+
       this.currentUserSubject.next({
         id: fbUser.uid,
         username: this.currentUserSubject.value?.username || fbUser.email || '',
