@@ -1,5 +1,5 @@
 import { ApplicationConfig, isDevMode } from '@angular/core';
-import { provideRouter, withPreloading, PreloadAllModules } from '@angular/router';
+import { provideRouter /*, withPreloading, PreloadAllModules*/ } from '@angular/router';
 import { routes } from './app.routes';
 import { provideIonicAngular } from '@ionic/angular/standalone';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
@@ -13,7 +13,7 @@ import { provideServiceWorker } from '@angular/service-worker';
 
 export const appConfig: ApplicationConfig = {
   providers: [
-    provideRouter(routes, withPreloading(PreloadAllModules)),
+    provideRouter(routes /* sin withPreloading(PreloadAllModules) */),
     provideIonicAngular(),
     provideHttpClient(withInterceptors([authInterceptor])),
     provideFirebaseApp(() => initializeApp(environment.firebase)),

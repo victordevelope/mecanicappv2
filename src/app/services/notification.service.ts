@@ -45,9 +45,14 @@ export class NotificationService {
     }
 
     // Web: usar Firebase Cloud Messaging
-    await this.requestPermissionAndSubscribe();
-  }
+    // En web, no llames automáticamente: hazlo bajo demanda:
+    // await this.requestPermissionAndSubscribe();
+    }
 
+    // Llama esto desde un botón “Activar notificaciones”
+    async initMessagingAfterInteraction() {
+      await this.requestPermissionAndSubscribe();
+    }
   private async showLocalNotification(title: string, body: string) {
     // Web: usar Notification API
     try {
@@ -129,10 +134,5 @@ export class NotificationService {
     } catch (err) {
       console.error('Error obteniendo token FCM (web):', err);
     }
-  }
-
-  // Llama esto tras una acción del usuario (ej. botón “Activar notificaciones”)
-  async initMessagingAfterInteraction() {
-    await this.requestPermissionAndSubscribe(); // tu rutina actual que pide permiso y registra token
   }
 }
