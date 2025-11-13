@@ -18,34 +18,47 @@ export class NotificationService {
   private dataService = inject(DataService);
 
   async initPushNotifications() {
-    if (!this.platform.is('capacitor')) {
-      console.log('Push notifications solo funcionan en dispositivos nativos');
+    // Si estamos en entorno híbrido (Android/iOS), usar Capacitor
+    if (this.platform.is('hybrid')) {
+      PushNotifications.checkPermissions().then(result => {
+        if (result.receive !== 'granted') {
+          return PushNotifications.requestPermissions();
+        }
+        return result;
+      }).then(() => {
+        PushNotifications.register();
+      });
+
+      PushNotifications.addListener('registration', token => {
+        console.log('Token push (nativo):', token.value);
+        // Envía el token al backend si quieres enviar notificaciones dirigidas
+      });
+
+      PushNotifications.addListener('registrationError', err => {
+        console.error('Error en registro de push (nativo):', err);
+      });
+
+      PushNotifications.addListener('pushNotificationReceived', notification => {
+        console.log('Push recibido (nativo):', notification);
+      });
       return;
     }
 
-    // Solicitar permiso para notificaciones
-    const result = await PushNotifications.requestPermissions();
-    if (result.receive === 'granted') {
-      // Registrar para recibir notificaciones push
-      await PushNotifications.register();
-
-      // Escuchar por notificaciones recibidas
-      PushNotifications.addListener('pushNotificationReceived', notification => {
-        console.log('Notificación recibida: ', notification);
-        // Aquí puedes mostrar una notificación local o actualizar la UI
-      });
-
-      // Escuchar por notificaciones cuando la app está en segundo plano
-      PushNotifications.addListener('pushNotificationActionPerformed', notification => {
-        console.log('Acción realizada en notificación: ', notification);
-        // Navegar a la página correspondiente según el tipo de notificación
-        if (notification.notification.data.page) {
-          this.router.navigate([notification.notification.data.page]);
-        }
-      });
-    }
+    // Web: usar Firebase Cloud Messaging
+    await this.requestPermissionAndSubscribe();
   }
 
+  private async showLocalNotification(title: string, body: string) {
+    // Web: usar Notification API
+    try {
+      new Notification(title, {
+        body,
+        icon: '/assets/icon/icon-192x192.png'
+      });
+    } catch (e) {
+      console.warn('No se pudo mostrar Notification API, fallback en UI:', e);
+    }
+  }
   // Registrar el token del dispositivo en el servidor
   registerDevice(token: string, userId: string) {
     return this.http.post(`${this.apiUrl}/notifications/register-device`, { token, userId });
@@ -74,5 +87,52 @@ export class NotificationService {
   private async scheduleLocalNotification(title: string, body: string, id: string) {
     // Implementación específica para notificaciones locales
     // Esto dependerá de la plataforma y plugins utilizados
+  }
+
+  // Solicita permiso y suscribe el cliente a FCM en Web
+  async requestPermissionAndSubscribe() {
+    if (!('Notification' in window)) {
+      console.warn('Notifications API no disponible en este navegador.');
+      return;
+    }
+
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+      console.warn('Permiso de notificaciones denegado.');
+      return;
+    }
+
+    const swReg = await navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/' });
+
+    try {
+      const { getToken, onMessage } = await import('@angular/fire/messaging');
+      const { getMessaging } = await import('firebase/messaging');
+      const vapidKey = 'BHvu9Tflin6L_Db5ghC-L3_GiT9W6R8Un8dnHKsb3oStxEPYS7ym3xSGFxJbZN4kKFA7jc9THTBVo8ALA_OB55o';
+
+      const messaging = getMessaging();
+      const token = await getToken(messaging, { vapidKey, serviceWorkerRegistration: swReg });
+      console.log('Token FCM (web):', token);
+
+      const userId = this.dataService.getCurrentUserId();
+      if (token && userId) {
+        this.registerDevice(token, userId).subscribe({
+          next: () => console.log('Dispositivo registrado para notificaciones web.'),
+          error: (err) => console.error('Error registrando dispositivo:', err)
+        });
+      }
+
+      onMessage(messaging, (payload: any) => {
+        const title = payload?.notification?.title || 'MecanicApp';
+        const body = payload?.notification?.body || 'Tienes un nuevo recordatorio';
+        this.showLocalNotification(title, body);
+      });
+    } catch (err) {
+      console.error('Error obteniendo token FCM (web):', err);
+    }
+  }
+
+  // Llama esto tras una acción del usuario (ej. botón “Activar notificaciones”)
+  async initMessagingAfterInteraction() {
+    await this.requestPermissionAndSubscribe(); // tu rutina actual que pide permiso y registra token
   }
 }

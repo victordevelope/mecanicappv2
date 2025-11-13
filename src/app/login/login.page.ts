@@ -32,8 +32,6 @@ import { logoGoogle } from 'ionicons/icons';
     IonCardContent,
     IonCardHeader,
     IonCardTitle,
-    IonAlert,
-    IonLoading,
     IonIcon
   ]
 })

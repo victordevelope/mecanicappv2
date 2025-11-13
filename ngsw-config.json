@@ -1,0 +1,49 @@
+{
+  "$schema": "./node_modules/@angular/service-worker/config/schema.json",
+  "index": "/index.html",
+  "assetGroups": [
+    {
+      "name": "app",
+      "installMode": "prefetch",
+      "updateMode": "prefetch",
+      "resources": {
+        "files": [
+          "/favicon.ico",
+          "/index.html",
+          "/*.css",
+          "/*.js"
+        ]
+      }
+    },
+    {
+      "name": "assets",
+      "installMode": "lazy",
+      "updateMode": "prefetch",
+      "resources": {
+        "files": [
+          "/assets/**",
+          "/svg/**",
+          "/manifest.webmanifest"
+        ]
+      }
+    }
+  ],
+  "dataGroups": [
+    {
+      "name": "api-network-first",
+      "urls": [
+   
+        "https://mecanicapp.onrender.com/vehicles",
+        "https://mecanicapp.onrender.com/maintenances",
+        "https://mecanicapp.onrender.com/reminders",
+        "https://mecanicapp.onrender.com/api/**"
+      ],
+      "cacheConfig": {
+        "strategy": "freshness",
+        "maxSize": 50,
+        "maxAge": "1d",
+        "timeout": "5s"
+      }
+    }
+  ]
+}
