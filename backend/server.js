@@ -263,3 +263,55 @@ app.get('/api/reminders', authenticateToken, async (req, res) => {
 const PORT = process.env.PORT || 10000; // usa el puerto de Render
 app.listen(PORT, () => console.log(`🚀 Servidor corriendo en puerto ${PORT}`));
 
+app.put('/api/vehicles/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { brand, model, year, plate } = req.body;
+
+    if (!brand || !model || !plate)
+      return res.status(400).json({ message: 'brand, model y plate son requeridos' });
+
+    const result = await pool.query(
+      'UPDATE vehicles SET brand = $1, model = $2, year = $3, plate = $4 WHERE id = $5 AND user_id = $6',
+      [brand, model, year || null, plate, parseInt(id, 10), req.user.id]
+    );
+
+    if (result.rowCount === 0)
+      return res.status(404).json({ message: 'Vehículo no encontrado' });
+
+    res.json({ message: 'Vehículo actualizado exitosamente' });
+  } catch (err) {
+    console.error('Error al actualizar vehículo:', err);
+    res.status(500).json({ message: 'Error al actualizar vehículo' });
+  }
+});
+
+app.delete('/api/vehicles/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    await pool.query('DELETE FROM maintenances WHERE vehicle_id = $1 AND user_id = $2', [
+      parseInt(id, 10),
+      req.user.id
+    ]);
+
+    await pool.query('DELETE FROM reminders WHERE vehicle_id = $1 AND user_id = $2', [
+      parseInt(id, 10),
+      req.user.id
+    ]);
+
+    const result = await pool.query('DELETE FROM vehicles WHERE id = $1 AND user_id = $2', [
+      parseInt(id, 10),
+      req.user.id
+    ]);
+
+    if (result.rowCount === 0)
+      return res.status(404).json({ message: 'Vehículo no encontrado' });
+
+    res.json({ message: 'Vehículo eliminado exitosamente' });
+  } catch (err) {
+    console.error('Error al eliminar vehículo:', err);
+    res.status(500).json({ message: 'Error al eliminar vehículo' });
+  }
+});
+
