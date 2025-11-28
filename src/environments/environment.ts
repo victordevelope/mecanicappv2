@@ -1,6 +1,6 @@
 export const environment = {
   production: false,
-  apiUrl: 'https://mecanicappv2.onrender.com/api',
+  apiUrl: 'https://mecanicappv2-g89q.onrender.com/api',
   firebase: {
     apiKey: 'AIzaSyCfWR1gpTfWfYdt1Sufh9tZimLCAowTYsI',
     authDomain: 'tu-proyecto-firebase.firebaseapp.com',

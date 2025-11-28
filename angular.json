@@ -23,7 +23,9 @@
               "browser": ""
             },
             "index": "src/index.html",
-            "polyfills": ["src/polyfills.ts"],
+            "polyfills": [
+              "src/polyfills.ts"
+            ],
             "tsConfig": "tsconfig.app.json",
             "inlineStyleLanguage": "scss",
             "assets": [
@@ -48,7 +50,10 @@
                 "output": "/"
               }
             ],
-            "styles": ["src/global.scss", "src/theme/variables.scss"],
+            "styles": [
+              "src/global.scss",
+              "src/theme/variables.scss"
+            ],
             "scripts": [],
             "browser": "src/main.ts",
             "serviceWorker": "ngsw-config.json"
@@ -59,16 +64,47 @@
               "sourceMap": false,
               "extractLicenses": true,
               "budgets": [
-                { "type": "initial", "maximumWarning": "2000kb", "maximumError": "2500kb" },
-                { "type": "anyComponentStyle", "maximumWarning": "20kb", "maximumError": "40kb" }
+                {
+                  "type": "initial",
+                  "maximumWarning": "2000kb",
+                  "maximumError": "2500kb"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "20kb",
+                  "maximumError": "40kb"
+                }
               ]
             }
+          }
+        },
+        "serve": {
+          "builder": "@angular-devkit/build-angular:development-server",
+          "options": {
+            "buildTarget": "app:build"
+          },
+          "configurations": {
+            "production": {
+              "buildTarget": "app:build:production"
+            }
+          }
+        },
+        "lint": {
+          "builder": "@angular-eslint/builder:lint",
+          "options": {
+            "lintFilePatterns": [
+              "src/**/*.ts",
+              "src/**/*.html"
+            ]
           }
         }
       }
     }
   },
   "cli": {
-    "analytics": "abdc3c01-d7c2-46f7-acd3-628ab1428f46"
+    "analytics": "abdc3c01-d7c2-46f7-acd3-628ab1428f46",
+    "schematicCollections": [
+      "@angular-eslint/schematics"
+    ]
   }
 }
